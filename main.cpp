@@ -1,8 +1,26 @@
+/**
+ * @file main.cpp
+ * @author @bakraw
+ * @version 0.1
+ * @date 2024-12-28
+ * 
+ * Implémentation de k-Nearest-Neighbors en C++, réalisée pour un projet universitaire.
+ * Génère aléatoirement des clusters comme données d'entrée, ainsi que des points à classer.
+ * 
+ * J'ai jugé plus simple de tout mettre dans main.cpp étant donné que le projet est assez petit.
+ **/
+
+
 #include <iostream>
 #include <random>
-#include <string>
 
 #include <matplot/matplot.h>
+
+
+// Constantes
+static constexpr unsigned int MIN_CLUSTER_SIZE{10};
+static constexpr unsigned int MAX_CLUSTER_SIZE{30};
+static constexpr int MAX_X_Y{100};
 
 
 /** 
@@ -12,19 +30,21 @@
  **/
 struct Point {
     const std::pair<double, double> coords;
-    uint8_t label;
+    std::uint8_t label;
+    // Des getters constexpr pourraient techniquement être ajoutés, mais ce serait un peu overkill.
 };
 
 
 /** 
- * Calcule la distance euclidienne entre deux points (théorème de Pythagore).
+* Calcule la distance euclidienne entre deux points (théorème de Pythagore).
 * @param a (Point&): Premier point
 * @param b (Point&): Deuxième point
-* @return La distance euclidienne a -> b (int).
+* @return La distance euclidienne a -> b (double).
 **/
 double euclideanDistance(const Point &a, const Point &b) {
     return std::sqrt(
-        std::pow(a.coords.first - b.coords.first, 2) + std::pow(a.coords.second - b.coords.second, 2)
+        std::pow(a.coords.first - b.coords.first, 2) +
+        std::pow(a.coords.second - b.coords.second, 2)
         );
 }
 
@@ -35,12 +55,21 @@ double euclideanDistance(const Point &a, const Point &b) {
  * @return Un vecteur de points (std::vector<Point>).
  **/
 std::vector<Point> generatePoints(const unsigned int &n) {
+    // Mise en place de l'aléatoire
+    std::random_device rd{};
+    std::mt19937 rng{rd()};
+
+    /* Génération des points.
+    On aurait techniquement pu utiliser un std::array mais il aurait fallu faire
+    un template pour les différentes valeurs possibles de n, moins lisible 
+    pour un gain de performance négligeable (s'il y en a, ce dont je ne suis pas sûr).
+    On se contentera d'une préallocation. */
     std::vector<Point> centers{};
     centers.reserve(n);
 
     for (unsigned int i{0}; i < n; ++i) {
         Point p{
-            .coords = std::make_pair(std::rand() % 100, std::rand() % 100),
+            .coords = std::make_pair(rng() % MAX_X_Y, rng() % MAX_X_Y),
             .label = i
         };
 
@@ -53,30 +82,30 @@ std::vector<Point> generatePoints(const unsigned int &n) {
 
 /**
  * Génère un cluster aléatoire autour d'un point central fourni, selon une distribution normale.
- * Les clusters générés sont formés de 10 à 30 points.
+ * La taille des clusters dépend des constantes MIN_CLUSTER_SIZE et MAX_CLUSTER_SIZE.
  * @param centre (Point&) : Centre du cluster à créer.
  * @return Un cluster sous forme de vecteur de points (std::vector<Point>).
  **/
-std::vector<Point> generateCluster(const Point &centre) {
+std::vector<Point> generateCluster(const Point &center) {
     // Mise en place de l'aléatoire
     std::random_device rd{};
     std::mt19937 rng{rd()};
-
-    // Distribution normale autour du centre
-    std::normal_distribution<double> distribution{};
+    std::normal_distribution<double> distribution{}; // Distribution normale autour du centre
     
+    // Génération du cluster
     std::vector<Point> cluster{};
+    const unsigned int clusterSize{MIN_CLUSTER_SIZE + (std::rand() % (MAX_CLUSTER_SIZE - MIN_CLUSTER_SIZE))};
 
-    for (int i{0}; i < 10 + (std::rand() % 20); ++i) {
+    for (unsigned int i{0}; i < clusterSize; ++i) {
         Point p{
-            .coords = std::make_pair(centre.coords.first + distribution(rng), centre.coords.second + distribution(rng)),
-            .label = centre.label
+            .coords = std::make_pair(center.coords.first + distribution(rng), center.coords.second + distribution(rng)),
+            .label = center.label
         };
 
         cluster.push_back(p);
     }
 
-    return cluster;
+    return cluster; 
 }
 
 
@@ -86,15 +115,15 @@ std::vector<Point> generateCluster(const Point &centre) {
  **/
 void displayCluster(const std::vector<Point> &cluster) {
     for (const Point &p : cluster) {
-        std::cout << "Point : (" << p.coords.first << ", " << p.coords.second << ") - Label : " << +p.label << "\n";
+        std::cout << "Point : (" << p.coords.first << ", " << p.coords.second << ") - Label : " << + p.label << "\n";
     }
 }
 
 
 int main(const int argc, const char* argv[]) {
-    // Traitement des arguments
     unsigned int k{}, n{};
 
+    // Traitement des arguments
     try {
         if (argc != 3) {
             throw std::logic_error("ERREUR -> Nombre d'arguments incorrect.");
