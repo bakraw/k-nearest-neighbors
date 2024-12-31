@@ -28,13 +28,24 @@
 /////////////////////////////////////////////// CONSTANTES & STRUCTURES /////////////////////////////////////////////////
 
 
-static constexpr unsigned int MIN_CLUSTER_SIZE{5};
-static constexpr unsigned int MAX_CLUSTER_SIZE{15};
-static constexpr int MAX_X_Y{100};
-static constexpr int MAX_SPREAD{8};
+// Génération
+static constexpr unsigned int MIN_CLUSTER_SIZE{5}; // Taille minimale des clusters
+static constexpr unsigned int MAX_CLUSTER_SIZE{15}; // Taille maximale des clusters
+static constexpr int MAX_X_Y{100};  // Valeur maximale pour les coordonnées des points (0 à MAX_X_Y)
+static constexpr int MAX_SPREAD{8}; // Écart-type de la distribution normale
 
-static constexpr bool DEBUG{false}; // Affiche tous les points et seed fixe si true. 
-                                   // Rediriger la sortie vers un fichier pour une meilleure lisibilité.
+// Viewport
+// Modifier au besoin si MAX_X_Y est changé
+static constexpr int VIEWPORT_X_MIN{-20};
+static constexpr int VIEWPORT_X_MAX{150};
+static constexpr int VIEWPORT_Y_MIN{-20};
+static constexpr int VIEWPORT_Y_MAX{150};
+
+// Debug mode
+// Affiche tous les points dans la console et utilise une seed fixe si activé. 
+// Rediriger la sortie vers un fichier pour une meilleure lisibilité.
+static constexpr bool DEBUG{false}; 
+
 
 /** 
  * Structure des points.
@@ -231,7 +242,7 @@ void plot(const std::vector<Point> &points, const unsigned int &pointCount) {
     // Initialisation de PLplot
     plsdev("xwin"); // Output device
     plinit();
-    plenv(-20, 150, -20, 150, 0, 0); // Viewport
+    plenv(VIEWPORT_X_MIN, VIEWPORT_X_MAX, VIEWPORT_Y_MIN, VIEWPORT_Y_MAX, 0, 0); // Viewport
 
     // Plot de chaque point
     for (size_t i = 0; i < points.size(); ++i) {
