@@ -22,7 +22,6 @@ make
 ```bash
 ./k-nearest-neighbors [Nombre de clusters à créer] [Nombre de points à classer] [Valeur de k]
 ```
-> *N.B.* - Les arguments doivent êtres des entiers positifs, inférieurs à 256.
 
 ## Fonctionnalités
 
