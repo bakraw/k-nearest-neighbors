@@ -29,8 +29,8 @@
 
 
 // Génération
-static constexpr unsigned int MIN_CLUSTER_SIZE{5}; // Taille minimale des clusters
-static constexpr unsigned int MAX_CLUSTER_SIZE{15}; // Taille maximale des clusters
+static constexpr unsigned int MIN_CLUSTER_SIZE{10}; // Taille minimale des clusters
+static constexpr unsigned int MAX_CLUSTER_SIZE{20}; // Taille maximale des clusters
 static constexpr int MAX_X_Y{100};  // Valeur maximale pour les coordonnées des points (0 à MAX_X_Y)
 static constexpr int MAX_SPREAD{8}; // Écart-type de la distribution normale
 
@@ -287,6 +287,8 @@ int main(const int argc, const char* argv[]) {
             throw std::logic_error("ERREUR -> Les arguments doivent être supérieurs à 0.");
         } else if (clusterCount > 255 || pointCount > 255 || k > 255) {
             throw std::logic_error("ERREUR -> Les arguments doivent être inférieurs à 256.");
+        } else if (k > MIN_CLUSTER_SIZE) { // Pour éviter de lir
+            throw std::logic_error("ERREUR -> k doit être inférieur ou égal à la taille minimale d'un cluster.");
         }
     } catch (const std::invalid_argument& e) {
         std::cerr << "ERREUR -> Les arguments fournis doivent être des nombres." << std::endl;
