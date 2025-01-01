@@ -287,7 +287,7 @@ int main(const int argc, const char* argv[]) {
             throw std::logic_error("ERREUR -> Les arguments doivent être supérieurs à 0.");
         } else if (clusterCount > 255 || pointCount > 255 || k > 255) {
             throw std::logic_error("ERREUR -> Les arguments doivent être inférieurs à 256.");
-        } else if (k > MIN_CLUSTER_SIZE) { // Pour éviter de lir
+        } else if (k > MIN_CLUSTER_SIZE) {
             throw std::logic_error("ERREUR -> k doit être inférieur ou égal à la taille minimale d'un cluster.");
         }
     } catch (const std::invalid_argument& e) {
