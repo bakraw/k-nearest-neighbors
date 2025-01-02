@@ -59,14 +59,139 @@ struct Point {
 };
 
 
-/////////////////////////////////////////////// GÉNÉRATION DES DONNÉES /////////////////////////////////////////////////
+/////////////////////////////////////////////// DECLARATIONS /////////////////////////////////////////////////
 
 
-/**
+// Génération
+
+/** 
  * Génère un vecteur contenant un nombre donné de points aléatoires.
  * @param n (const unsigned int&) : Nombre de points à générer.
  * @return Un vecteur de points (std::vector<Point>).
  **/
+std::vector<Point> generatePoints(const unsigned int &n, std::mt19937 &rng);
+
+/**
+ * Génère un cluster aléatoire autour d'un point central fourni, selon une distribution normale.
+ * La taille des clusters dépend des constantes MIN_CLUSTER_SIZE et MAX_CLUSTER_SIZE.
+ * 
+ * @param centre (Point&) : Centre du cluster à créer.
+ * @param rng (std::mt19937&) : Aléatoire.
+ * 
+ * @return Un cluster sous forme de vecteur de points (std::vector<Point>).
+ **/
+std::vector<Point> generateCluster(const Point &center, std::mt19937 &rng);
+
+
+// k-Nearest-Neighbors
+
+/** 
+* Calcule la distance euclidienne entre deux points (= théorème de Pythagore).
+* Aurait pu être une fonction membre de Point.
+*
+* @param a (Point&): Premier point
+* @param b (Point&): Deuxième point
+*
+* @return La distance euclidienne a -> b (double).
+**/
+double euclideanDistance(const Point &a, const Point &b);
+
+/**
+* Classification des points à l'aide de k-Nearest-Neighbors.
+*
+* @param clusterSet (const std::vector<std::vector<Point>>&): Ensemble de clusters (données d'entraînement).
+* @param toClassify (const std::vector<Point>&): Points à classer (données de test).
+* @param k (const unsigned int&): Nombre de voisins à prendre en compte.
+*
+* @return Un vecteur de points contenant les points classifiés (std::vector<Point>).
+**/
+std::vector<Point> classify(const std::vector<std::vector<Point>> &clusterSet,
+                            const std::vector<Point> &toClassify,
+                            const unsigned int &k);
+
+
+// Affichage
+
+/** 
+ * Affiche un cluster (label & centre) dans la console.
+ * @param cluster (std::vector<Point>&) : Cluster à afficher.
+ **/
+void displayCluster(const std::vector<Point> &cluster);
+
+/**
+ * Affiche les points avec PLplot.
+ * Les points sont colorés selon leur label, et les points de test sont de forme différente.
+ * 
+ * @param points (const std::vector<Point>&) : Vecteur de points à afficher.
+ * @param pointCount (const unsigned int&) : Nombre de points qui ont été classifiés.
+ **/
+void plot(const std::vector<Point> &points, const unsigned int &pointCount);
+
+
+///////////////////////////////////////////////// MAIN //////////////////////////////////////////////////
+
+
+int main(const int argc, const char* argv[]) {
+    unsigned int clusterCount{}, pointCount{}, k{};
+
+    // Traitement des arguments
+    try {
+        if (argc != 4) {
+            throw std::logic_error("ERREUR -> Nombre d'arguments incorrect.");
+        }
+        
+        // Conversion des arguments en int
+        clusterCount = std::stoi(argv[1]);
+        pointCount = std::stoi(argv[2]);
+        k = std::stoi(argv[3]);
+
+        if (clusterCount < 1 || pointCount < 1 || k < 1) {
+            throw std::logic_error("ERREUR -> Les arguments doivent être supérieurs à 0.");
+        } else if (clusterCount > 255 || pointCount > 255 || k > 255) {
+            throw std::logic_error("ERREUR -> Les arguments doivent être inférieurs à 256.");
+        } else if (k > MIN_CLUSTER_SIZE) {
+            throw std::logic_error("ERREUR -> k doit être inférieur ou égal à la taille minimale d'un cluster.");
+        }
+    } catch (const std::invalid_argument& e) {
+        std::cerr << "ERREUR -> Les arguments fournis doivent être des nombres." << std::endl;
+        return EXIT_FAILURE;
+    } catch (const std::out_of_range& e) {
+        std::cerr << "ERREUR -> Un argument fourni est hors de portée." << std::endl;
+        return EXIT_FAILURE;
+    } catch (const std::logic_error& e) {
+        std::cerr << e.what() << "\n";
+        std::cerr << "Usage : ./k-nearest-neighbors [Nombre de clusters à créer] [Nombre de points à classer] [Valeur de k]" << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    // Mise en place de l'aléatoire
+    std::random_device rd{};
+    std::mt19937 rng{rd()};
+    if (DEBUG) {
+        rng.seed(1); // Seed fixe pour debug
+    }
+
+    std::cout << "-------------------Clusters-------------------\n";
+    const std::vector<Point> centers{generatePoints(clusterCount, rng)}; // Génération des centres des clusters
+
+    // Création d'un vecteur de vecteurs de points, c.-à-d. ensemble de tous les clusters initiaux
+    // Servira de 'training data' pour l'algorithme de classification
+    std::vector<std::vector<Point>> points{};
+    for (const Point &center : centers) {
+        points.push_back(generateCluster(center, rng));
+    }
+
+    const std::vector<Point> toClassify{generatePoints(pointCount, rng)}; // Génération des points à classer
+
+    plot(classify(points, toClassify, k), pointCount); // Classification et affichage des points
+
+    return EXIT_SUCCESS;
+}
+
+
+/////////////////////////////////////////////// DEFINITIONS /////////////////////////////////////////////////
+
+
 std::vector<Point> generatePoints(const unsigned int &n, std::mt19937 &rng) {
     /* Génération des points.
     On aurait techniquement pu utiliser un std::array mais il aurait fallu faire un template pour les différentes valeurs 
@@ -88,29 +213,6 @@ std::vector<Point> generatePoints(const unsigned int &n, std::mt19937 &rng) {
 }
 
 
-/** 
- * Affiche un cluster (label & centre) dans la console.
- * @param cluster (std::vector<Point>&) : Cluster à afficher.
- **/
-void displayCluster(const std::vector<Point> &cluster) {
-    std::cout << +cluster[0].label << " - Centre : (" << cluster[0].coords.first << ", " << cluster[0].coords.second << ")" << "\n";
-    if (DEBUG) {
-        for (size_t i{0}; i < cluster.size(); ++i) {
-            std::cout << +cluster[i].label << " : (" << cluster[i].coords.first << ", " << cluster[i].coords.second << ")" << "\n";
-        }
-    }
-}
-
-
-/**
- * Génère un cluster aléatoire autour d'un point central fourni, selon une distribution normale.
- * La taille des clusters dépend des constantes MIN_CLUSTER_SIZE et MAX_CLUSTER_SIZE.
- * 
- * @param centre (Point&) : Centre du cluster à créer.
- * @param rng (std::mt19937&) : Aléatoire.
- * 
- * @return Un cluster sous forme de vecteur de points (std::vector<Point>).
- **/
 std::vector<Point> generateCluster(const Point &center, std::mt19937 &rng) {
     std::normal_distribution<double> distribution{0.0, MAX_SPREAD}; // Distribution normale autour du centre avec écart-type MAX_SPREAD
     
@@ -133,18 +235,6 @@ std::vector<Point> generateCluster(const Point &center, std::mt19937 &rng) {
 }
 
 
-/////////////////////////////////////////////// K-NEAREST-NEIGHBORS /////////////////////////////////////////////////
-
-
-/** 
-* Calcule la distance euclidienne entre deux points (= théorème de Pythagore).
-* Aurait pu être une fonction membre de Point.
-*
-* @param a (Point&): Premier point
-* @param b (Point&): Deuxième point
-*
-* @return La distance euclidienne a -> b (double).
-**/
 double euclideanDistance(const Point &a, const Point &b) {
     return std::hypot(
         a.coords.first - b.coords.first,
@@ -153,15 +243,6 @@ double euclideanDistance(const Point &a, const Point &b) {
 }
 
 
-/**
-* Classification des points à l'aide de k-Nearest-Neighbors.
-*
-* @param clusterSet (const std::vector<std::vector<Point>>&): Ensemble de clusters (données d'entraînement).
-* @param toClassify (const std::vector<Point>&): Points à classer (données de test).
-* @param k (const unsigned int&): Nombre de voisins à prendre en compte.
-*
-* @return Un vecteur de points contenant les points classifiés (std::vector<Point>).
-**/
 std::vector<Point> classify(const std::vector<std::vector<Point>> &clusterSet,
                             const std::vector<Point> &toClassify,
                             const unsigned int &k) {
@@ -228,16 +309,16 @@ std::vector<Point> classify(const std::vector<std::vector<Point>> &clusterSet,
 }
 
 
-///////////////////////////////////////////////// PLOTTING //////////////////////////////////////////////////
+void displayCluster(const std::vector<Point> &cluster) {
+    std::cout << +cluster[0].label << " - Centre : (" << cluster[0].coords.first << ", " << cluster[0].coords.second << ")" << "\n";
+    if (DEBUG) {
+        for (size_t i{0}; i < cluster.size(); ++i) {
+            std::cout << +cluster[i].label << " : (" << cluster[i].coords.first << ", " << cluster[i].coords.second << ")" << "\n";
+        }
+    }
+}
 
 
-/**
- * Affiche les points avec PLplot.
- * Les points sont colorés selon leur label, et les points de test sont de forme différente.
- * 
- * @param points (const std::vector<Point>&) : Vecteur de points à afficher.
- * @param pointCount (const unsigned int&) : Nombre de points qui ont été classifiés.
- **/
 void plot(const std::vector<Point> &points, const unsigned int &pointCount) {
     // Initialisation de PLplot
     plsdev("xwin"); // Output device
@@ -263,65 +344,4 @@ void plot(const std::vector<Point> &points, const unsigned int &pointCount) {
     }
 
     plend(); // Affichage et cleanup
-}
-
-
-///////////////////////////////////////////////// MAIN //////////////////////////////////////////////////
-
-
-int main(const int argc, const char* argv[]) {
-    unsigned int clusterCount{}, pointCount{}, k{};
-
-    // Traitement des arguments
-    try {
-        if (argc != 4) {
-            throw std::logic_error("ERREUR -> Nombre d'arguments incorrect.");
-        }
-        
-        // Conversion des arguments en int
-        clusterCount = std::stoi(argv[1]);
-        pointCount = std::stoi(argv[2]);
-        k = std::stoi(argv[3]);
-
-        if (clusterCount < 1 || pointCount < 1 || k < 1) {
-            throw std::logic_error("ERREUR -> Les arguments doivent être supérieurs à 0.");
-        } else if (clusterCount > 255 || pointCount > 255 || k > 255) {
-            throw std::logic_error("ERREUR -> Les arguments doivent être inférieurs à 256.");
-        } else if (k > MIN_CLUSTER_SIZE) {
-            throw std::logic_error("ERREUR -> k doit être inférieur ou égal à la taille minimale d'un cluster.");
-        }
-    } catch (const std::invalid_argument& e) {
-        std::cerr << "ERREUR -> Les arguments fournis doivent être des nombres." << std::endl;
-        return EXIT_FAILURE;
-    } catch (const std::out_of_range& e) {
-        std::cerr << "ERREUR -> Un argument fourni est hors de portée." << std::endl;
-        return EXIT_FAILURE;
-    } catch (const std::logic_error& e) {
-        std::cerr << e.what() << "\n";
-        std::cerr << "Usage : ./k-nearest-neighbors [Nombre de clusters à créer] [Nombre de points à classer] [Valeur de k]" << std::endl;
-        return EXIT_FAILURE;
-    }
-
-    // Mise en place de l'aléatoire
-    std::random_device rd{};
-    std::mt19937 rng{rd()};
-    if (DEBUG) {
-        rng.seed(1); // Seed fixe pour debug
-    }
-
-    std::cout << "-------------------Clusters-------------------\n";
-    const std::vector<Point> centers{generatePoints(clusterCount, rng)}; // Génération des centres des clusters
-
-    // Création d'un vecteur de vecteurs de points, c.-à-d. ensemble de tous les clusters initiaux
-    // Servira de 'training data' pour l'algorithme de classification
-    std::vector<std::vector<Point>> points{};
-    for (const Point &center : centers) {
-        points.push_back(generateCluster(center, rng));
-    }
-
-    const std::vector<Point> toClassify{generatePoints(pointCount, rng)}; // Génération des points à classer
-
-    plot(classify(points, toClassify, k), pointCount); // Classification et affichage des points
-
-    return EXIT_SUCCESS;
 }
