@@ -26,7 +26,7 @@ make
 ## Fonctionnalités
 
 - Génère automatiquement un 'training data' (clusters initiaux) aléatoire.
-- Génère automatiquement un 'testing data' (points à classifier) aléatoire.
+- Génère automatiquement un 'testing data' (points à classer) aléatoire.
 - Classe les points générés selon k-NN (chaque point classé sera pris en compte par les suivants).
 - Visualisation des points avec PLplot : couleur différente pour chaque cluster (seulement une dizaine, donc éviter de générer trop de clusters) et forme différente pour le testing data (-> astérisque).
 - Ne pas hésiter à modifier les constantes de configuration en haut du code source.
